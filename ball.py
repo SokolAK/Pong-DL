@@ -10,7 +10,7 @@ class Ball(pygame.sprite.Sprite):
         
         self.bounceParams = []
         self.maxXSpeed = maxSpeed
-        self.maxYSpeed = 1
+        self.maxYSpeed = maxSpeed
         self.diameter = diameter
         self.image = pygame.Surface([diameter, diameter])
         self.image.fill(BLACK)
@@ -18,34 +18,42 @@ class Ball(pygame.sprite.Sprite):
  
         pygame.draw.rect(self.image, color, [0, 0, diameter, diameter])
         
-        self.velocity = [self.maxXSpeed, randint(-self.maxYSpeed, self.maxYSpeed)]
+        self.velocity = [self.maxXSpeed, self.maxYSpeed/2*randint(-4, 4)]
         
         self.rect = self.image.get_rect()
         
 
-    def update(self):
+    def update(self, courtSize):
         self.rect.x += self.velocity[0]
         self.rect.y += self.velocity[1]
-      
+        # if self.rect.x < 0:
+        #     self.rect.x = 0 
+        # if self.rect.x > courtSize[0] - self.diameter:
+        #     self.rect.x = courtSize[0] - self.diameter
+        if self.rect.y < 0:
+            self.rect.y = 0 
+        if self.rect.y > courtSize[1] - self.diameter:
+            self.rect.y = courtSize[1] - self.diameter
 
-    def calcYvelocity(self, ball, paddle):
-        return -self.velocity[1]
-        ballY = ball.getYPosition()
+
+    def calcYvelocity(self, paddle):
+        ballY = self.getYPosition()
         paddleY = paddle.getYPosition()
         paddleH = paddle.height
-        diff = ceil(self.maxYSpeed * 2 * (ballY - paddleY) / paddleH)
+
+        diff = int((ballY - paddleY) / (self.diameter)) * 5
 
         if self.velocity[1] != 0 :
             return sign(self.velocity[1]) * abs(diff)
         elif diff != 0:
             return diff
         else :
-           return randint(-self.maxYSpeed, self.maxYSpeed)
+           return self.maxYSpeed/2*randint(-4, 4)
 
 
-    def bouncePaddle(self, direction, ball, paddle) :
+    def bouncePaddle(self, direction, paddle) :
         self.velocity[0] = direction * abs(self.velocity[0])
-        self.velocity[1] = self.calcYvelocity(ball, paddle)
+        self.velocity[1] = self.calcYvelocity(paddle)
         self.updateBounceParams()
 
 
