@@ -13,8 +13,8 @@ pygame.init()
 BLACK = (0,0,0)
 WHITE = (255,255,255)
  
-courtSize = (400, 400)
-displaySize = (400, 450)
+courtSize = (200, 200)
+displaySize = (200, 250)
 screen = pygame.display.set_mode(displaySize, vsync=1)
 pygame.display.set_caption("Pong-DL")
 
@@ -25,7 +25,7 @@ ball = Ball(WHITE, courtSize[1]/20, 10)
 # ball.rect.y = ((courtSize[1] / (ball.diameter/2)) / 2 - 1) * (ball.diameter/2)
 
 paddleWidth = ball.diameter/2
-paddleHeight = ball.diameter*5
+paddleHeight = ball.diameter*3
 paddleStep = (courtSize[1]-paddleHeight)/2/10
  
 paddleA = Paddle(WHITE, paddleWidth, paddleHeight, paddleStep)
@@ -38,7 +38,7 @@ paddleB.rect.y = (courtSize[1] - paddleB.height)/2
  
 
 courtLineWidth = 2
-tickFreq = 0
+tickFreq = 600
  
 all_sprites_list = pygame.sprite.Group()
  
@@ -73,6 +73,22 @@ def updateSprites() :
     ball.update(courtSize)
 
 
+def NNaction() :
+    frame = pygame.surfarray.pixels_red(screen)[:,0:courtSize[1]]/255
+    frameReducedX = sum_chunk(frame, 5)/5
+    frame = sum_chunk(frameReducedX, 5, axis=0)/5
+    #frame = reversed(frame.T)
+    currFrame = frame.ravel()
+    global prevFrame
+    x = currFrame - prevFrame if prevFrame is not None else np.zeros(len(currFrame))
+    prevFrame = currFrame
+
+    if paddleA.mode == "AI" :
+        paddleA.prediction = networkA.push(x, scoreA, scoreB)
+    if paddleB.mode == "AI" :
+        paddleB.prediction = networkB.push(x, scoreB, scoreA)
+
+
 def refreshScreen():
     screen.fill(BLACK)
     #pygame.draw.line(screen, WHITE, [courtSize[0]/2-courtLineWidth/2, 0], [courtSize[0]/2-courtLineWidth/2, displaySize[1]], courtLineWidth)
@@ -82,11 +98,8 @@ def refreshScreen():
     #pygame.display.flip()
     pygame.display.update()
 
-    frame = pygame.surfarray.pixels_red(screen)[:,0:courtSize[1]]/255
-    if paddleA.mode == "AI" :
-        paddleA.prediction = networkA.push(frame, scoreA, scoreB)
-    if paddleB.mode == "AI" :
-        paddleB.prediction = networkB.push(frame, scoreB, scoreA)
+    if paddleA.mode == "AI" or paddleB.mode == "AI" :
+        NNaction()
 
     clock.tick(tickFreq)
 
@@ -140,22 +153,29 @@ def detectPaddleBounce():
 
 
 def movePaddle(paddle):
-    if paddle.prediction == 1 :
-        paddle.moveUp()
-    if paddle.prediction == 0 :
-        paddle.moveDown(courtSize[1]) 
+    if paddle.mode == "AI":
+        if paddle.prediction == 1 :
+            paddle.moveUp()
+        if paddle.prediction == 0 :
+            paddle.moveDown(courtSize[1]) 
+    if paddle.mode == "rand":
+        if np.random.uniform() < 1 :
+            if paddle.getYPosition() > ball.getYPosition() :
+                paddle.moveUp()
+                # print("UP")
+            else :
+                paddle.moveDown(courtSize[1]) 
+                # print("DOWN")  
 
 
 def moveAIpaddles():
-    if paddleA.mode == "AI":
-        movePaddle(paddleA)
-    if paddleB.mode == "AI":
-        movePaddle(paddleB)
+    movePaddle(paddleA)
+    movePaddle(paddleB)
 
 
 # -------- Main Program Loop -----------
-networkA = Network('A')
-networkB = Network('B')
+networkA = Network('A', [int(courtSize[0]/5), int(courtSize[1]/5)])
+networkB = Network('B', [int(courtSize[0]/5), int(courtSize[1]/5)])
 
 while carryOn:
 
@@ -163,6 +183,8 @@ while carryOn:
     ball.rect.y = (courtSize[1] - ball.diameter)/2
     scoreA = 0
     scoreB = 0
+    currFrame = None
+    prevFrame = None
 
     if paddleA.mode == "AI" :
         networkA.prepare()
@@ -171,7 +193,7 @@ while carryOn:
 
     refreshScreen()
 
-    while scoreA < 10 and scoreB < 10 and carryOn:
+    while scoreA < 21 and scoreB < 21 and carryOn:
         updateSprites()
 
         checkUserAction()
@@ -185,8 +207,10 @@ while carryOn:
     # updateSprites()
     # refreshScreen()
 
-    networkA.learn()
-    networkB.learn()
+    if paddleA.mode == "AI" :
+        networkA.learn()
+    if paddleB.mode == "AI" :
+        networkB.learn()
 
 
 pygame.quit()

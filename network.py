@@ -6,10 +6,11 @@ from keras.models import Sequential
 
 class Network():
 
-    def __init__(self, name):
+    def __init__(self, name, courtSize):
+        self.gamesNo = 0
         self.name = name
         self.model = Sequential()
-        self.model.add(Dense(units=200,input_dim=80*80, activation='relu', kernel_initializer='glorot_uniform'))
+        self.model.add(Dense(units=100,input_dim=courtSize[0]*courtSize[1], activation='relu', kernel_initializer='glorot_uniform'))
         self.model.add(Dense(units=1, activation='sigmoid', kernel_initializer='RandomNormal'))
         self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         self.gamma = 0.99
@@ -19,9 +20,8 @@ class Network():
         self.xTrain = []
         self.yTrain = []
         self.rewards = []
-        self.reward_sum = 0
-        self.currFrame = None
-        self.prevFrame = None
+        self.rewardsWin = 0
+        self.rewardsLoss = 0
         self.scoreMine = 0
         self.scoreEnemy = 0
 
@@ -30,15 +30,7 @@ class Network():
         return self.model.predict(np.expand_dims(x, axis=1).T)
 
 
-    def push(self, frame, scoreMine, scoreEnemy) :
-        frameReducedX = sum_chunk(frame, 5)/5
-        frame = sum_chunk(frameReducedX, 5, axis=0)/5
-        #frame = reversed(frame.T)
-        self.currFrame = frame.ravel()
-
-        x = self.currFrame - self.prevFrame if self.prevFrame is not None else np.zeros(len(self.currFrame))
-        self.prevFrame = self.currFrame
-
+    def push(self, x, scoreMine, scoreEnemy) :
         #proba = model.predict(np.expand_dims(x, axis=1).T)
         proba = self.predict(x)
         y = 1 if np.random.uniform() < proba else 0 # 1 - up, 0 - down
@@ -50,7 +42,10 @@ class Network():
 
         reward = scoreMine - self.scoreMine + self.scoreEnemy - scoreEnemy
         self.rewards.append(reward)
-        self.reward_sum += reward
+        if reward > 0 :
+            self.rewardsWin += 1
+        if reward < 0 :
+            self.rewardsLoss += 1
 
         self.scoreMine = scoreMine
         self.scoreEnemy = scoreEnemy
@@ -60,6 +55,7 @@ class Network():
         #             file.write(f"{item} ")
         #         file.write("\n")
         return y
+
 
     def discount_rewards(self, r, gamma):
         """ take 1D float array of rewards and compute discounted reward """
@@ -76,7 +72,10 @@ class Network():
         discounted_r /= np.std(discounted_r) #idem
         return discounted_r
 
+
     def learn(self):
-        print(self.name + ': The total reward was :', self.reward_sum)
+        self.gamesNo += self.scoreMine + self.scoreEnemy
+        print("------------------------------------------------------\nGames no.: ", self.gamesNo)
+        print(self.name + ': The total reward was:', self.rewardsWin - self.rewardsLoss, end='')
         #episode_nb += 1
         self.model.fit(x=np.vstack(self.xTrain), y=np.vstack(self.yTrain), verbose=1, sample_weight=self.discount_rewards(self.rewards, self.gamma))
