@@ -18,22 +18,21 @@ class Paddle(pygame.sprite.Sprite):
         self.image.set_colorkey(BLACK)
  
         pygame.draw.rect(self.image, color, [0, 0, width, height])
-
         self.rect = self.image.get_rect()
         
 
-    def moveUp(self):
+    def move_up(self):
         self.rect.y -= self.step
         if self.rect.y < 0:
           self.rect.y = 0
           
 
-    def moveDown(self, screenHeight):
+    def move_down(self, screenHeight):
         self.rect.y += self.step 
         maxY = screenHeight - self.height
         if self.rect.y > maxY:
           self.rect.y = maxY
 
 
-    def getYPosition(self):
+    def get_y_position(self):
         return self.rect.y + self.height/2
