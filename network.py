@@ -1,99 +1,100 @@
-from random import randint
 import utils
+import pickle
 import numpy as np
-from keras.layers import Dense
-from keras.models import Sequential
-from keras.models import load_model
-from keras.initializers import RandomNormal
 
 class Network():
-
-    def __init__(self, name, inputSize, hiddenSize, gamma, mode, batch, cont):
-        self.gameNo = 0
+    def __init__(self, name, input_size, hidden_size, gamma, decay_rate, batch, learn_rate, strategy, resume):
         self.name = name
-        self.inputSize = inputSize
-        self.hiddenSize = hiddenSize
+        self.input_size = input_size
+        self.hidden_size = hidden_size
         self.gamma = gamma
-        self.mode = mode
+        self.decay_rate = decay_rate
         self.batch = batch
-        self.model = None
-        self.rewardBalance = 0
-        self.totalRewards = 0
-        self.fileName = f"keras_n{name}_i{inputSize}_h{hiddenSize}_g{gamma}_m{mode}_b{batch}"
+        self.learn_rate = learn_rate
+        self.strategy = strategy
+        self.resume = resume
+        self.running_reward = None
+        self.is_active = True
+        self.file_name = f"model_{name}_i{input_size}_h{hidden_size}_g{gamma}_d{decay_rate}_b{batch}_l{learn_rate}_s{strategy}"
+        #self.file_name = f"model_{name}_i{input_size}_h{hidden_size}"
 
-        if cont:
+        self.model = {}
+        if resume:
             try:
-                self.model = load_model(self.fileName)
+                self.model = pickle.load(open(self.file_name, 'rb'))
             except:
-                print(f"File '{self.fileName}' does not exist! Preparing new model...")
+                self.model = {}
 
-        if self.model == None:
-            self.model = Sequential()
-            self.model.add(Dense(units=hiddenSize, input_dim=inputSize, activation='relu', kernel_initializer='glorot_uniform'))
-            self.model.add(Dense(units=1, activation='sigmoid', kernel_initializer='RandomNormal'))
-            self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        if not self.model:
+            self.model['W1'] = np.random.randn(hidden_size, input_size) / np.sqrt(input_size) # "Xavier" initialization
+            self.model['W2'] = np.random.randn(hidden_size) / np.sqrt(hidden_size)
 
-
-    def prepare(self) :
-        self.xTrain = []
-        self.yTrain = []
-        self.rewards = []
-        self.rewardsWin = 0
-        self.rewardsLoss = 0
-        self.scoreMine = 0
-        self.scoreEnemy = 0
+        self.grad_buffer = { k : np.zeros_like(v) for k,v in self.model.items() } # update buffers that add up gradients over a batch
+        self.rmsprop_cache = { k : np.zeros_like(v) for k,v in self.model.items() } # rmsprop memory
+        self.episode_no = 0
 
 
-    def predict(self,x) :
-        return self.model(np.expand_dims(x, axis=1).T)
-        #return self.model.predict(np.expand_dims(x, axis=1).T)
+    def prepare(self):
+        self.x_train = []
+        self.h_train = [] # hidden state
+        self.dlogps_train = [] # grad that encourages the action that was taken to be taken
+        self.r_train = []
+        self.reward_sum = 0
+        self.curr_frame = None
+        self.prev_frame = None
 
 
-    def push(self, x, scoreMine, scoreEnemy, reward) :
-        proba = self.predict(x)
-        y = 1 if np.random.uniform() < proba else 0 # 1 - up, 0 - down
-
-        self.xTrain.append(x)
-        self.yTrain.append(y)
-        
-        self.rewards.append(reward)
-        if reward > 0 :
-            self.rewardsWin += 1
-        if reward < 0 :
-            self.rewardsLoss += 1
-
-        self.scoreMine = scoreMine
-        self.scoreEnemy = scoreEnemy
-
-        return y
+    def train(self, x, h, prob, action, reward):
+        self.x_train.append(x) # observation
+        self.h_train.append(h) # hidden state
+        y = 1 if action == 2 else 0 # a "fake label"
+        self.dlogps_train.append(y - prob) # grad that encourages the action that was taken to be taken
+        self.r_train.append(reward) # record reward
+        self.reward_sum += reward
 
 
-    def log(self):
-        try:
-            lastLine = ""
-            with open(f"log_{self.name}.txt", 'r') as f:
-                for line in f:
-                    pass
-                lastLine = line.split()
-                gameNo = lastLine[0]
-                totalRewards = lastLine[1]
-        except:
-            gameNo = self.gameNo
-            totalRewards = self.totalRewards
+    def policy_forward(self, x):
+        h = np.dot(self.model['W1'], x)
+        h[h < 0] = 0 # ReLU nonlinearity
+        logp = np.dot(self.model['W2'], h)
+        p = utils.sigmoid(logp)
+        return p, h # return probability of taking action 2, and hidden state
 
-        self.gameNo = int(gameNo) + 1
-        self.totalRewards = int(totalRewards) + self.rewardsWin + self.rewardsLoss
-        self.rewardBalance = self.rewardsWin - self.rewardsLoss
-        
-        #with open(f"log_{self.name}.txt", 'a') as f:
-        #    f.write(f"{self.gameNo} {self.totalRewards} {self.rewardBalance}\n")
+
+    def policy_backward(self, epx, eph, epdlogp):
+        """ backward pass. (eph is array of intermediate hidden states) """
+        dW2 = np.dot(eph.T, epdlogp).ravel()
+        dh = np.outer(epdlogp, self.model['W2'])
+        dh[eph <= 0] = 0 # backpro prelu
+        dW1 = np.dot(dh.T, epx)
+        return {'W1':dW1, 'W2':dW2}
+
 
     def learn(self):
-        self.log()
+        self.episode_no += 1
+        epx = np.vstack(self.x_train)
+        eph = np.vstack(self.h_train)
+        epdlogp = np.vstack(self.dlogps_train)
+        epr = np.vstack(self.r_train)
 
-        print("-----------------------------------------------------------------------------------------")
-        print(f"Network: {self.name} -> Game no.: {self.gameNo}")
-        print(f"Total number of rewards: {self.totalRewards} -> Reward balance: {self.rewardBalance}", end = '')
-        self.model.fit(x=np.vstack(self.xTrain), y=np.vstack(self.yTrain), verbose=1, sample_weight=utils.discount_rewards(self.rewards, self.gamma))
-        self.model.save(self.fileName)
+        # compute the discounted reward backwards through time
+        discounted_epr = utils.discount_rewards(epr, self.gamma)
+
+        epdlogp *= discounted_epr # modulate the gradient with advantage (PG magic happens right here.)
+        grad = self.policy_backward(epx, eph, epdlogp)
+        for k in self.model:
+            self.grad_buffer[k] += grad[k] # accumulate grad over batch
+
+        self.running_reward = self.reward_sum if self.running_reward is None else self.running_reward * 0.99 + self.reward_sum * 0.01
+        print(f"Network {self.name}: episode {self.episode_no} -> reward sum: {self.reward_sum}, running reward: {self.running_reward}")
+
+        # perform rmsprop parameter update every batch_size episodes
+        if self.episode_no % self.batch == 0:
+            for k,v in self.model.items():
+                g = self.grad_buffer[k] # gradient
+                self.rmsprop_cache[k] = self.decay_rate * self.rmsprop_cache[k] + (1 - self.decay_rate) * g**2
+                self.model[k] += self.learn_rate * g / (np.sqrt(self.rmsprop_cache[k]) + 1e-5)
+                self.grad_buffer[k] = np.zeros_like(v) # reset batch gradient buffer
+
+                pickle.dump(self.model, open(self.file_name, 'wb'))
 

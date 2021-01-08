@@ -5,7 +5,7 @@ BLACK = (0,0,0)
  
 class Paddle(pygame.sprite.Sprite):
 
-    def __init__(self, color, width, height, step):
+    def __init__(self, color, width, height, court_height, step):
         super().__init__()
 
         self.mode = "player"
@@ -16,6 +16,7 @@ class Paddle(pygame.sprite.Sprite):
         self.image = pygame.Surface([width, height])
         self.image.fill(BLACK)
         self.image.set_colorkey(BLACK)
+        self.court_height = court_height
  
         pygame.draw.rect(self.image, color, [0, 0, width, height])
         self.rect = self.image.get_rect()
@@ -27,12 +28,8 @@ class Paddle(pygame.sprite.Sprite):
           self.rect.y = 0
           
 
-    def move_down(self, screenHeight):
+    def move_down(self):
         self.rect.y += self.step 
-        maxY = screenHeight - self.height
+        maxY = self.court_height - self.height
         if self.rect.y > maxY:
           self.rect.y = maxY
-
-
-    def get_y_position(self):
-        return self.rect.y + self.height/2
