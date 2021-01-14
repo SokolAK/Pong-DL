@@ -7,17 +7,18 @@ import utils
 import time
 
 
+# Players: 'player', 'AI', 'trainer', 'rand'
+player_A ='AI'
+player_B ='rand'
+
 pixel = 10
 ball_size = 2
 ball_base_speed = 2
 court_size = (23 * ball_size, 21 * ball_size)
-paddle_size = (ball_base_speed, ball_size * 3)
+paddle_size = (ball_base_speed, ball_size * 5)
 paddle_step = 3
 game_base_speed = 20
 max_score = 21
-# Players: 'player', 'AI', 'trainer', 'rand'
-player_A ='AI'
-player_B ='rand'
 
 
 # Game & Networks
@@ -36,16 +37,16 @@ game = Pong(pixel=pixel,
 net_A = Network(name="A", 
     input_size=game.court_size[0]*game.court_size[1],
     hidden_size=400, 
-    gamma=0.96,
+    gamma=0.98,
     decay_rate=0.99,
     batch=10,
     learn_rate=1e-3,
-    strategy='defense-attack', 
+    strategy='defense', 
     resume=True)
     
 net_B = Network(name="B", 
     input_size=game.court_size[0]*game.court_size[1],
-    hidden_size=400, 
+    hidden_size=200, 
     gamma=0.98,
     decay_rate=0.99,
     batch=10,

@@ -15,7 +15,7 @@ class Network():
         self.resume = resume
         self.running_reward = None
         self.is_active = True
-        self.file_name = f"model_{name}_i{input_size}_h{hidden_size}_g{gamma}_d{decay_rate}_b{batch}_l{learn_rate}_s{strategy}"
+        self.file_name = f"models/model_{name}_i{input_size}_h{hidden_size}_g{gamma}_d{decay_rate}_b{batch}_l{learn_rate}_s{strategy}"
         #self.file_name = f"model_{name}_i{input_size}_h{hidden_size}"
 
         self.model = {}
