@@ -5,8 +5,13 @@ A variation on the classic Pong game in which the player can face a computer opp
 a deep neural network implemented on the basis of the post and script by Andrej Karpathy:
 * [Deep Reinforcement Learning: Pong from Pixels](http://karpathy.github.io/2016/05/31/rl/)
 * [Training a Neural Network ATARI Pong agent with Policy Gradients from raw pixels](https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5)
+
 It is possible to train your own neural networks and play matches with them or watch the network vs. network.
 The game also offers a two-player mode.
+
+
+## Screenshots
+<img src="./screenshots/pong-dl.gif" height="300"> <img src="./screenshots/screen1.png" height="300">
 
 
 ## System requirements
@@ -61,7 +66,3 @@ Paddle controls:
 
 ## Status
 Project is: _progress_
-
-
-## Screenshots
-<img src="./screenshots/pong-dl.gif" height="300"> <img src="./screenshots/screen1.png" height="300">
