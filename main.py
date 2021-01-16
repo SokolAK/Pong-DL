@@ -9,7 +9,7 @@ import time
 
 # Players: 'player', 'AI', 'trainer', 'rand'
 player_A ='AI'
-player_B ='rand'
+player_B ='AI'
 
 pixel = 10
 ball_size = 2

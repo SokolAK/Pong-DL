@@ -148,8 +148,10 @@ class Pong():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_KP_MINUS:
                     self.tick_freq = max(int(self.tick_freq / 1.2), 1)
+                    print(f"Game speed: {self.tick_freq}")
                 if event.key == pygame.K_KP_PLUS:
-                    self.tick_freq = max(int(np.ceil(self.tick_freq * 1.2)), 8192)
+                    self.tick_freq = min(int(np.ceil(self.tick_freq * 1.2)), 8192)
+                    print(f"Game speed: {self.tick_freq}")
 
         keys = pygame.key.get_pressed()
         if self.paddle_A.mode == "player" :
