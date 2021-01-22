@@ -2,16 +2,21 @@ from network import Network
 from pongaks import Pong
 from plot import Plot
 import plot
+import sys
 import numpy as np
 import utils
 import time
-
 
 # Players: 'player', 'AI', 'trainer', 'rand'
 player_A ='AI'
 player_B ='AI'
 
-pixel = 10
+if len(sys.argv) > 1:
+    player_A = sys.argv[1]
+if len(sys.argv) > 2:
+    player_B = sys.argv[2]
+
+pixel = 15
 ball_size = 2
 ball_base_speed = 2
 court_size = (23 * ball_size, 21 * ball_size)
@@ -34,22 +39,22 @@ game = Pong(pixel=pixel,
     player_A=player_A,
     player_B=player_B)
 
-net_A = Network(name="A", 
-    input_size=game.court_size[0]*game.court_size[1],
-    hidden_size=400, 
-    gamma=0.98,
-    decay_rate=0.99,
-    batch=10,
-    learn_rate=1e-3,
-    strategy='defense', 
-    resume=True)
-    
-net_B = Network(name="B", 
+net_A = Network(name=f"A_csize{court_size}_bsize{ball_size}_bspeed{ball_base_speed}_psize{paddle_size}_pstep{paddle_step}", 
     input_size=game.court_size[0]*game.court_size[1],
     hidden_size=200, 
     gamma=0.98,
     decay_rate=0.99,
-    batch=10,
+    batch=50,
+    learn_rate=1e-3,
+    strategy='defense', 
+    resume=True)
+    
+net_B = Network(name=f"B_csize{court_size}_bsize{ball_size}_bspeed{ball_base_speed}_psize{paddle_size}_pstep{paddle_step}", 
+    input_size=game.court_size[0]*game.court_size[1],
+    hidden_size=100, 
+    gamma=0.95,
+    decay_rate=0.99,
+    batch=100,
     learn_rate=1e-3,
     strategy='defense', 
     resume=True)   
@@ -83,24 +88,9 @@ def determine_reward(net, bounced_me, bounced_enemy):
 
 def process_frame(net, direction):
     x = None
-
-    # if direction < 0:
-    #     id0 = game.paddle_size[0]
-    #     idE = game.court_size[0]
-    #     net.curr_frame[idE-id0:idE, :] = 0
-
-    # if direction > 0:
-    #     idE = game.paddle_size[0]
-    #     net.curr_frame[0:idE, :] = 0
-
     net.curr_frame = net.curr_frame.ravel()
     if net.prev_frame is not None:
         x = net.curr_frame - net.prev_frame
-        #prev_frame = curr_frame
-
-        # xPlot = x.reshape(-1, int(game.court_size[1]))
-        # axs[1,1].imshow(xPlot.T, cmap='gray', interpolation='none')
-        # plt.draw()
 
     net.prev_frame = net.curr_frame
 
@@ -131,9 +121,13 @@ def push_net(net, direction, reward) :
 
 # Main loop
 # ----------------------------------------------------------------------------------------------------------------------
-plot = Plot()
 if plotting:
-    figure = plot.prepare_plots(net_A, net_B)
+    if net_A.is_active:
+        plot_A = Plot(f"Network A", 'tab:blue', 'CR')
+        plot_A.update(net_A.history['episode_no'], net_A.history['reward_sum'], net_A.history['running_reward'])
+    if net_B.is_active:
+        plot_B = Plot(f"Network B", 'tab:orange', 'BR')
+        plot_B.update(net_B.history['episode_no'], net_B.history['reward_sum'], net_B.history['running_reward'])
 
 while True:
 
@@ -161,12 +155,16 @@ while True:
             action_B = push_net(net_B, +1, reward_B)
 
         if finished:
+            updated_A = updated_B = False
             if net_A.is_active:
-                net_A.learn()
+                updated_A = net_A.learn()
             if net_B.is_active:
-                net_B.learn()
+                updated_B = net_B.learn()
 
             if plotting:
-                plot.update_plots(figure, net_A, net_B)
+                if net_A.is_active and updated_A:
+                    plot_A.update([net_A.episode_no], [net_A.reward_sum], [net_A.running_reward])
+                if net_B.is_active and updated_B:
+                    plot_B.update([net_B.episode_no], [net_B.reward_sum], [net_B.running_reward])
 
             time.sleep(pause_time)

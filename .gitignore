@@ -1,3 +1,3 @@
 __pycache__/
-copy/
-start.bat
+nets/old/
+delete_history.py

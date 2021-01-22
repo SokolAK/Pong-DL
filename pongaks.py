@@ -31,7 +31,7 @@ class Pong():
         self.ball = Ball(self.WHITE, self.pixel, ball_size, ball_base_speed)
         #self.court_size = (self.court_width, self.court_height)
 
-        self.score_board_height = self.pixel * 10
+        self.score_board_height = int(self.court_height * 0.2)
         self.display_size = (self.court_width, self.court_height + self.score_board_height)
 
         self.screen = pygame.display.set_mode(self.display_size, vsync=1)
@@ -59,24 +59,31 @@ class Pong():
 
 
     def display_scores(self):
-        font_size = int(self.score_board_height / 2)
+        interline_size = self.pixel
+        font_size = int((self.score_board_height - interline_size * 3) / 2)
+        font = pygame.font.Font(None, font_size)
+
+        #Recalculate font size to adjust the text to score board height
+        f_width, f_height = font.size(self.paddle_A.mode + self.paddle_B.mode)
+        font_size *= font_size / f_height
+        font_size = int(font_size)
         font = pygame.font.Font(None, font_size)
 
         label_A = self.paddle_A.mode
         label_A_width, label_A_height = font.size(label_A)
         label = font.render(label_A, 1, self.WHITE)
-        self.screen.blit(label, (self.court_width / 4 - label_A_width / 2, self.court_height + self.pixel))
+        self.screen.blit(label, (self.court_width / 4 - label_A_width / 2, self.court_height + interline_size))
         score_A_width, score_A_height = font.size(str(self.score_A))
         score = font.render(str(self.score_A), 1, self.WHITE)
-        self.screen.blit(score, (self.court_width / 4 - score_A_width / 2, self.court_height + self.pixel * 2 + label_A_height))
+        self.screen.blit(score, (self.court_width / 4 - score_A_width / 2, self.court_height + interline_size * 2 + label_A_height))
 
         label_B = self.paddle_B.mode
         label_B_width, label_B_height = font.size(label_B)
         label = font.render(label_B, 1, self.WHITE)
-        self.screen.blit(label, (self.court_width / 4 * 3 - label_B_width / 2, self.court_height + self.pixel))
+        self.screen.blit(label, (self.court_width / 4 * 3 - label_B_width / 2, self.court_height + interline_size))
         score_B_width, score_B_height = font.size(str(self.score_B))
         score = font.render(str(self.score_B), 1, self.WHITE)
-        self.screen.blit(score, (self.court_width / 4 * 3 - score_B_width / 2, self.court_height + self.pixel * 2 + label_B_height))
+        self.screen.blit(score, (self.court_width / 4 * 3 - score_B_width / 2, self.court_height + interline_size * 2 + label_B_height))
 
 
     def update_sprites(self) :
