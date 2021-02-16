@@ -26,7 +26,7 @@ Here is an overview of game parameters located in the main application script: _
 
 ### Demo
 
-Running _main.py_ with the values ​​given below shows the game between two pretrained neural networks saved by default in the _nets_ folder:
+Running _main.py_ with the values given below shows the game between two pretrained neural networks saved by default in the _nets_ folder:
 * net_A_csize(46, 42)_bsize2_bspeed2_psize(2, 10)_pstep3_h200
 * net_B_csize(46, 42)_bsize2_bspeed2_psize(2, 10)_pstep3_h100
 
@@ -61,7 +61,7 @@ Paddle controls:
 
 ### Neural network settings
 
-`net_A _(net_B)_ = Network(` -- _A_ network settings (the values ​​for _B_ network are given in brackets)</br >
+`net_A _(net_B)_ = Network(` -- _A_ network settings (the values for _B_ network are given in brackets)</br >
 &nbsp;&nbsp;&nbsp;&nbsp;`name="A", ("B")` -- network name</br >
 &nbsp;&nbsp;&nbsp;&nbsp;`input_size=46*42,` -- number of input data nodes - the size of the field in previously defined pixels</br >
 &nbsp;&nbsp;&nbsp;&nbsp;`hidden_size=200, _(100)_` -- number of hidden layer nodes</br >
