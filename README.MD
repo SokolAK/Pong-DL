@@ -17,7 +17,10 @@ The game also offers a two-player mode.
 
 ## System requirements
 * Python 3.8.5
-* Pygame 2.0.0
+* Pygame 2.0.0 
+* PyQt5 5.15.4
+* NumPy 1.20.2 
+* Matplotlib 3.4.1 
 
 
 ## Manual
